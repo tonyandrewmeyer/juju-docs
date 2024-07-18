@@ -37,7 +37,7 @@ In the `src/charm.py` file, in the `__init__` function of your charm, set up an 
 self.framework.observe(self.on.cache_storage_attached, self._update_configuration)
 ```
 
-> See more: [StorageAttachedEvent](https://ops.readthedocs.io/en/latest/#ops.StorageAttachedEvent), [Juju SDK | Holistic vs delta charms](https://juju.is/docs/sdk/holistic-vs-delta-charms]
+> See more: [StorageAttachedEvent](https://ops.readthedocs.io/en/latest/#ops.StorageAttachedEvent), [Juju SDK | Holistic vs delta charms](https://juju.is/docs/sdk/holistic-vs-delta-charms)
 
 Now, in the body of the charm definition, define the event handler, or adjust an existing holistic one. For example, providing the location of the attached storage to the workload configuration:
 

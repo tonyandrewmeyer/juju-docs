@@ -39,7 +39,7 @@ if self.unit.is_leader():
 ```
 
 Note that Juju guarantees leadership for only 30 seconds after a `leader-elected`
-event or a `is-leader` check. If the charm code may run longer, then extra
+event or an `is-leader` check. If the charm code may run longer, then extra
 `is_leader()` calls should be made to ensure that the unit is still the leader.
 
 <a href="#heading--test-leadership-management"><h2 id="heading--test-leadership-management">Test leadership management</h2></a>
@@ -124,7 +124,7 @@ needs to remove the leader unit (machine charms) or run `juju_stop_unit` in the
 charm container (Kubernetes charms). The test then needs to wait up to 60 seconds
 for Juju to elect a new leader.
 
-An integration test might want to verify that leader and non-leader behaviour is
+More commonly, an integration test might want to verify that leader and non-leader behaviour is
 as expected. For example:
 
 ```python

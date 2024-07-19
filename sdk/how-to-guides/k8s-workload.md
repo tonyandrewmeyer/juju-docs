@@ -410,9 +410,11 @@ Each check can be one of three types. The types and their success criteria are:
 * `exec`: executing the specified command must yield a zero exit code.
 
 - [Check configuration](#heading--check-configuration)
+- [Respond to a check failing or recovering](#heading--respond-to-check)
 - [Fetch check status](#heading--fetch-check-status)
 - [Check auto-restart](#heading--check-auto-restart)
 - [Check health endpoint and probes](#heading--check-health-endpoint-and-probes)
+- [Test checks](#heading--test-checks)
 
 <a href="#heading--check-configuration"><h3 id="heading--check-configuration">Check configuration</h3></a>
 
@@ -446,6 +448,57 @@ Each check is performed with the specified `period` (the default is 10 seconds a
 A check is considered healthy until it's had `threshold` errors in a row (the default is 3). At that point, the `on-check-failure` action will be triggered, and the health endpoint will return an error response (both are discussed below). When the check succeeds again, the failure count is reset.
 
 See the [layer specification](https://github.com/canonical/pebble#layer-specification) for more details about the fields and options for different types of checks.
+
+<a href="#heading--respond-to-check"><h3 id="heading--respond-to-check">Respond to a check failing or recovering</h3></a>
+
+[note status="version"]Ops 2.15 and Juju 3.6[/note]
+
+To have the charm respond to a check reaching the failure threshold, or passing again afterwards, observe the `pebble_check_failed` and `pebble_check_recovered` events and switch on the info's `name`:
+
+```python
+class PostgresCharm(ops.CharmBase):
+    def __init__(self, framework: ops.Framework):
+        super().__init__(framework)
+        # Note that "db" is the workload container's name
+        framework.observe(self.on["db"].pebble_check_failed, self._on_pebble_check_failed)
+        framework.observe(self.on["db"].pebble_check_recovered, self._on_pebble_check_recovered)
+
+    def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name == "http-test":
+            logger.warning("The http-test has started failing!")
+            self.unit.status = ops.ActiveStatus("Degraded functionality ...")
+
+        elif event.info == "online":
+            logger.error("The service is no longer online!")
+
+    def _on_pebble_check_recovered(self, event: ops.PebbleCheckRecoveredEvent):
+        if event.info.name == "http-test":
+            logger.warning("The http-test has stopped failing!")
+            self.unit.status = ops.ActiveStatus()
+
+        elif event.info == "online":
+            logger.error("The service is online again!")
+```
+
+All check events have an `info` property with the details of the check's current status. Note that by the time that the charm receives the event, the status of the check may have changed (for example, passed again after failing). If the response to the check failing is light (such as changing the status) then it's fine to rely on the status of the check at the time the event was triggered - there will be a subsequent check-recovered event, and the status will quickly flick back to the correct one. If the response is heavier (such as restarting a service with an adjusted configuration), then the two events should share a common handler and check the current status via the `info` property; for example:
+
+```python
+class PostgresCharm(ops.CharmBase):
+    def __init__(self, framework: ops.Framework):
+        super().__init__(framework)
+        # Note that "db" is the workload container's name
+        framework.observe(self.on["db"].pebble_check_failed, self._on_pebble_check_failed)
+        framework.observe(self.on["db"].pebble_check_recovered, self._on_pebble_check_recovered)
+
+    def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name != "up":
+            # For now, we ignore the other tests.
+            return
+        if event.info.status == ops.pebble.CheckStatus.DOWN:
+            self.activate_alternative_configuration()
+        else:
+            self.activate_main_configuration()
+```
 
 <a href="#heading--fetch-check-status"><h3 id="heading--fetch-check-status">Fetch check status</h3></a>
 
@@ -483,6 +536,24 @@ When Juju creates a sidecar charm container, it initialises the Kubernetes liven
 Ready implies alive, and not alive implies not ready. If you've configured an "alive" check but no "ready" check, and the "alive" check is unhealthy, `/v1/health?level=ready` will report unhealthy as well, and the Kubernetes readiness probe will act on that.
 
 If there are no checks configured, Pebble returns HTTP 200 so the liveness and readiness probes are successful by default. To use this feature, you must explicitly create checks with `level: alive` or `level: ready` in the layer configuration.
+
+<a href="#heading--test-checks"><h3 id="heading--test-checks">Test checks</h3></a>
+
+[note status="version"]Scenario 7.0[/note]
+
+To test charms that use Pebble check events, use the Scenario `CheckInfo` class and the emit the appropriate event. For example, to simulate the "http-test" check failing, the charm test could do the following:
+
+```python
+def test_http_check_failing():
+    ctx = scenario.Context(PostgresCharm)
+    check_info = scenario.CheckInfo("http-test", failures=3, status=ops.pebble.CheckStatus.DOWN)
+    container = scenario.Container("db", check_infos={check_info})
+    state_in = scenario.State(containers={container})
+
+    state_out = ctx.run(ctx.on.pebble_check_failed(container, check_info), state_in)
+
+    assert state_out...
+```
 
 <a href="#heading--manage-files-in-the-workload-container"><h2 id="heading--manage-files-in-the-workload-container">Manage files in the workload container</h2></a>
 

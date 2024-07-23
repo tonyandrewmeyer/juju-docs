@@ -200,7 +200,7 @@ def _on_config_changed(self, event: ops.ConfigChangedEvent) -> None:
         .....
 ```
 
-In this example, each time a `config-changed` event is fired, a new overlay layer is created that only includes the environment config, populated using the charm’s config. Pebble handles ensuring that the application is only restarted if the configuration has changed.
+In this example, each time a `config-changed` event is fired, a new overlay layer is created that only includes the environment config, populated using the charm’s config. Pebble will ensure that that the application is only restarted if the configuration has changed.
 
 <a href="#heading--configure-a-pebble-layer"><h3 id="heading--configure-a-pebble-layer">Configure a Pebble layer</h3></a>
 
@@ -293,7 +293,9 @@ class SnappassTestCharm(ops.CharmBase):
 
 <a href="#heading--check-container-health"><h3 id="heading--check-container-health">Check container health</h3></a>
 
-The Op library provides a way to ensure that your container is healthy. In the [Container](https://ops.readthedocs.io/en/latest/#ops.Container) class, `Container.can_connect()` can be used if you only need to know that Pebble is responding at a specific point in time - for example to update a status message. This should *not* be used to guard against later Pebble operations, because that introduces a race condition where Pebble might be responsive when `can_connect()` is called, but is not when the later operation is executed. Instead, charms should always include `try`/`except` statements around Pebble operations, to avoid the unit going into error state.
+The Ops library provides a way to ensure that your container is healthy. In the `Container` class, `Container.can_connect()` can be used if you only need to know that Pebble is responding at a specific point in time - for example to update a status message. This should *not* be used to guard against later Pebble operations, because that introduces a race condition where Pebble might be responsive when `can_connect()` is called, but is not when the later operation is executed. Instead, charms should always include `try`/`except` statements around Pebble operations, to avoid the unit going into error state.
+
+> See more: [`ops.Container`](https://ops.readthedocs.io/en/latest/#ops.Container)
 
 <a href="#heading--start-and-stop"><h3 id="heading--start-and-stop">Start and stop</h3></a>
 
@@ -451,7 +453,9 @@ See the [layer specification](https://github.com/canonical/pebble#layer-specific
 
 <a href="#heading--respond-to-check"><h3 id="heading--respond-to-check">Respond to a check failing or recovering</h3></a>
 
-[note status="version"]Ops 2.15 and Juju 3.6[/note]
+[note status="version"]
+Ops 2.15 and Juju 3.6
+[/note]
 
 To have the charm respond to a check reaching the failure threshold, or passing again afterwards, observe the `pebble_check_failed` and `pebble_check_recovered` events and switch on the info's `name`:
 
@@ -480,7 +484,7 @@ class PostgresCharm(ops.CharmBase):
             logger.error("The service is online again!")
 ```
 
-All check events have an `info` property with the details of the check's current status. Note that by the time that the charm receives the event, the status of the check may have changed (for example, passed again after failing). If the response to the check failing is light (such as changing the status) then it's fine to rely on the status of the check at the time the event was triggered - there will be a subsequent check-recovered event, and the status will quickly flick back to the correct one. If the response is heavier (such as restarting a service with an adjusted configuration), then the two events should share a common handler and check the current status via the `info` property; for example:
+All check events have an `info` property with the details of the check's current status. Note that, by the time that the charm receives the event, the status of the check may have changed (for example, passed again after failing). If the response to the check failing is light (such as changing the status), then it's fine to rely on the status of the check at the time the event was triggered — there will be a subsequent check-recovered event, and the status will quickly flick back to the correct one. If the response is heavier (such as restarting a service with an adjusted configuration), then the two events should share a common handler and check the current status via the `info` property; for example:
 
 ```python
 class PostgresCharm(ops.CharmBase):
@@ -539,7 +543,9 @@ If there are no checks configured, Pebble returns HTTP 200 so the liveness and r
 
 <a href="#heading--test-checks"><h3 id="heading--test-checks">Test checks</h3></a>
 
-[note status="version"]Scenario 7.0[/note]
+[note status="version"]
+Scenario 7.0
+[/note]
 
 To test charms that use Pebble check events, use the Scenario `CheckInfo` class and the emit the appropriate event. For example, to simulate the "http-test" check failing, the charm test could do the following:
 

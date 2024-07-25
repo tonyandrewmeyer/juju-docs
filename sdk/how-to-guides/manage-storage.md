@@ -2,15 +2,13 @@
 
 **Contents:**
 
-- [Implement storage management](#heading--implement-storage-management)
-- [Test storage management](#heading--test-storage-management)
+- [Use storage volumes](#heading--use-storage-volumes)
+- [Test storage volume use](#heading--test-storage-volume-use)
 
-
-<a href="#heading--implement-storage-management"><h2 id="heading--implement-storage-management">Implement storage management</h2></a>
+<a href="#heading--use-storage-volumes"><h2 id="heading--use-storage-volumes">Use storage volumes</h2></a>
 
 - [Declare the storage in `charmcraft.yaml`](#heading--declare-the-storage-in-charmcraft-yaml)
 - [Observe the `storage-attached` event and define an event handler](#heading--observe-the-attached-event-and-define-an-event-handler)
-
 
 <a href="#heading--declare-the-storage-in-charmcraft-yaml"><h3 id="heading--declare-the-storage-in-charmcraft-yaml">Declare the storage in `charmcraft.yaml`</h3></a>
 
@@ -103,7 +101,7 @@ The storage will not be available immediately after that call - the charm should
 observe the `storage-attached` event and handle any remaining setup once Juju
 has attached the new storage.
 
-<a href="#heading--test-storage-management"><h2 id="heading--test-storage-management">Test storage management</h2></a>
+<a href="#heading--test-storage-volume-use"><h2 id="heading--test-storage-volume-use">Test storage volume use</h2></a>
 
 > See first: [Get started with charm testing](/t/6894)
 

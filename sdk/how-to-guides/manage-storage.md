@@ -9,12 +9,12 @@
 <a href="#heading--implement-storage-management"><h2 id="heading--implement-storage-management">Implement storage management</h2></a>
 
 - [Declare the storage in `charmcraft.yaml`](#heading--declare-the-storage-in-charmcraft-yaml)
-- [Observe the attached event and define an event handler](#heading--observe-the-attached-event-and-define-an-event-handler)
+- [Observe the `storage-attached` event and define an event handler](#heading--observe-the-attached-event-and-define-an-event-handler)
 
 
 <a href="#heading--declare-the-storage-in-charmcraft-yaml"><h3 id="heading--declare-the-storage-in-charmcraft-yaml">Declare the storage in `charmcraft.yaml`</h3></a>
 
-To define the storage that can be provided to the charm, define a `storage` section in `charmcraft.yaml` that lists the storages and information about each storage. For example, for a transient filesystem storage mounted to `/cache/` that is at least 1GB in size:
+To define the storage that can be provided to the charm, define a `storage` section in `charmcraft.yaml` that lists the storage volumes and information about each storage. For example, for a transient filesystem storage mounted to `/cache/` that is at least 1GB in size:
 
 ```yaml
 storage:
@@ -29,9 +29,9 @@ storage:
 
 > See more: [File `charmcraft.yaml` > `storage`](/t/7132#heading--storage)
 
-<a href="#heading--observe-the-attached-event-and-define-an-event-handler"><h3 id="heading--observe-the-attached-event-and-define-an-event-handler">Observe the attached event and define an event handler</h3></a>
+<a href="#heading--observe-the-attached-event-and-define-an-event-handler"><h3 id="heading--observe-the-attached-event-and-define-an-event-handler">Observe the `storage-attached` event and define an event handler</h3></a>
 
-In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the attached event associated with your storage and pair that with an event handler, typically a holistic one. For example:
+In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the `storage-attached` event associated with your storage and pair that with an event handler, typically a holistic one. For example:
 
 ```
 self.framework.observe(self.on.cache_storage_attached, self._update_configuration)
@@ -186,19 +186,19 @@ can inspect that from the `Context.requested_storage` API.
 ctx = scenario.Context(MyCharm)
 ctx.run('some-event-that-will-request-more-storage', scenario.State())
 
-# The charm has requested two 'foo' storages to be provisioned:
+# The charm has requested two 'foo' storage volumes to be provisioned:
 assert ctx.requested_storages['foo'] == 2
 ```
 
-Requesting storages has no other consequence in Scenario. In real life, this
-request will trigger Juju to provision the storage and execute the charm again
-with foo-storage-attached. So a natural follow-up Scenario test suite for this
-case would be:
+Requesting storage volumes has no other consequence in Scenario. In real life,
+this request will trigger Juju to provision the storage and execute the charm
+again with foo-storage-attached. So a natural follow-up Scenario test suite for
+this case would be:
 
 ```
 ctx = scenario.Context(MyCharm)
 foo_0 = scenario.Storage('foo')
-# The charm is notified that one of the storages it has requested is ready:
+# The charm is notified that one of the storage volumes it has requested is ready:
 ctx.run(foo_0.attached_event, State(storage=[foo_0]))
 
 foo_1 = scenario.Storage('foo')

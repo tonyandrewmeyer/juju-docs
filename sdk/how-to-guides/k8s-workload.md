@@ -112,8 +112,8 @@ import ops
 
 class PauseCharm(ops.CharmBase):
     # ...
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, framework):
+        super().__init__(framework)
         # Set a friendly name for your charm. This can be used with the Operator
         # framework to reference the container, add layers, or interact with
         # providers/consumers easily.
@@ -123,11 +123,11 @@ class PauseCharm(ops.CharmBase):
         # 
         # If you set self.name as above and use it in the layer definition following this
         # example, the event will be <self.name>_pebble_ready
-        self.framework.observe(self.on.pause_pebble_ready, self._on_pause_pebble_ready)
+        framework.observe(self.on.pause_pebble_ready, self._on_pause_pebble_ready)
         # ...
 
     def _on_pause_pebble_ready(self, event: ops.PebbleReadyEvent) -> None:
-        """ Handle the pebble_ready event"""
+        """Handle the pebble_ready event"""
         # You can get a reference to the container from the PebbleReadyEvent
         # directly with:
         # container = event.workload
@@ -170,51 +170,37 @@ def _on_config_changed(self, event: ops.ConfigChangedEvent) -> None:
     # Get a reference to the container so we can manipulate it
     container = self.unit.get_container(self.name)
 
-    # container.can_connect() provides a mechanism to ensure that
-    # no errors  were raised by when trying to connect to pebble
-    if container.can_connect():
-        try:
-            # Get the 'pause' service from within the container
-            service = container.get_service(self.name)
-
-            # Create a new config layer - specify 'override: merge' in 
-            # the 'pause' service definition to overlay with existing layer
-            layer = ops.pebble.Layer(
-                {
-                    "services": {
-                        "pause": {
-                            "override": "merge",
-                            "environment": {
-                                "TIMEOUT": self.model.config["timeout"],
-                            },
-                        }
+    # Create a new config layer - specify 'override: merge' in 
+    # the 'pause' service definition to overlay with existing layer
+    layer = ops.pebble.Layer(
+        {
+            "services": {
+                "pause": {
+                    "override": "merge",
+                    "environment": {
+                        "TIMEOUT": self.model.config["timeout"],
                     },
                 }
-            )
+            },
+        }
+    )
 
-            # Get the current services from the plan in the container
-            services = container.get_plan().services
-            # Check if there are any changes to the config
-            # So we can avoid unnecessarily restarting the service
-            if services != layer.services:
-                # Add the layer to Pebble
-                container.add_layer(self.name, layer, combine=True)
-                logging.debug("Added config layer to Pebble plan")
+    try:
+        # Add the layer to Pebble
+        container.add_layer(self.name, layer, combine=True)
+        logging.debug("Added config layer to Pebble plan")
 
-                # Start/restart the 'pause' service in the container
-                container.restart("pause")
-                logging.info("Restarted pause service")
-                # All is well, set an ActiveStatus
-                self.unit.status = ops.ActiveStatus()
-
-        except ops.pebble.PathError, ops.pebble.ProtocolError:
-            # handle errors
-          .....
-    # ...
-
+        # Tell Pebble to update the plan, which will restart any services if needed.
+        container.replan()
+        logging.info("Updated pause service")
+        # All is well, set an ActiveStatus
+        self.unit.status = ops.ActiveStatus()
+    except ops.pebble.PathError, ops.pebble.ProtocolError, ops.pebble.ConnectionError:
+        # handle errors (for example: the container might not be ready yet)
+        .....
 ```
 
-In this example, each time a `config-changed` event is fired, a new overlay layer is created that only includes the environment config, populated using the charm’s config. The application is only restarted if the configuration has changed.
+In this example, each time a `config-changed` event is fired, a new overlay layer is created that only includes the environment config, populated using the charm’s config. Pebble will ensure that that the application is only restarted if the configuration has changed.
 
 <a href="#heading--configure-a-pebble-layer"><h3 id="heading--configure-a-pebble-layer">Configure a Pebble layer</h3></a>
 
@@ -230,7 +216,6 @@ See the [layer specification](https://github.com/canonical/pebble#layer-specific
 - [Fetch the effective plan](#heading--fetch-the-effective-plan)
 
 <a href="#heading--add-a-configuration-layer"><h4 id="heading--add-a-configuration-layer">Add a configuration layer</h4></a>
-
 
 To add a configuration layer, call [`Container.add_layer`](https://ops.readthedocs.io/en/latest/#ops.Container.add_layer) with a label for the layer, and the layer's contents as a YAML string, Python dict, or [`pebble.Layer`](https://ops.readthedocs.io/en/latest/#ops.pebble.Layer) object.
 
@@ -308,11 +293,9 @@ class SnappassTestCharm(ops.CharmBase):
 
 <a href="#heading--check-container-health"><h3 id="heading--check-container-health">Check container health</h3></a>
 
-The Op library provides a way to ensure that your container is healthy. In the [Container](https://ops.readthedocs.io/en/latest/#ops.Container) class, `Container.can_connect()` can be used in a conditional statement as a guard around your code to ensure that Pebble is operational.
+The Ops library provides a way to ensure that your container is healthy. In the `Container` class, `Container.can_connect()` can be used if you only need to know that Pebble is responding at a specific point in time - for example to update a status message. This should *not* be used to guard against later Pebble operations, because that introduces a race condition where Pebble might be responsive when `can_connect()` is called, but is not when the later operation is executed. Instead, charms should always include `try`/`except` statements around Pebble operations, to avoid the unit going into error state.
 
-This provides a convenient pattern for ensuring that Pebble is ready, and obviates the need to include `try`/`except` statements around Pebble operations in every hook to account for a hook being called when your Juju unit is being started, stopped or removed: cases where the Pebble API is more likely to be still coming up, or being shutdown. It can also be used on startup to check whether Pebble has started or not outside of the `pebble_ready` hook.
-
-`Container.can_connect()` will catch and log `pebble.ConnectionError`, `pebble.APIError`, and `FileNotFoundError` (in case the Pebble socket has disappeared as part of Charm removal). Other Pebble errors or exceptions should be handled as normal.
+> See more: [`ops.Container`](https://ops.readthedocs.io/en/latest/#ops.Container)
 
 <a href="#heading--start-and-stop"><h3 id="heading--start-and-stop">Start and stop</h3></a>
 
@@ -328,13 +311,12 @@ class MyCharm(ops.CharmBase):
 
     def _on_backup_action(self, event):
         container = self.unit.get_container('main')
-        if container.can_connect():
-            try:
-                container.stop('mysql')
-                do_mysql_backup()
-                container.start('mysql')
-            except ops.pebble.ProtocolError, ops.pebble.PathError:
-                # handle Pebble errors
+        try:
+            container.stop('mysql')
+            do_mysql_backup()
+            container.start('mysql')
+        except ops.pebble.ProtocolError, ops.pebble.PathError, ops.pebble.ConnectionError:
+            # handle Pebble errors
 ```
 
 It's not an error to start a service that's already started, or stop one that's already stopped. These actions are *idempotent*, meaning they can safely be performed more than once, and the service will remain in the same state.
@@ -344,7 +326,6 @@ When Pebble starts a service, Pebble waits one second to ensure the process does
 To stop a service, Pebble first sends `SIGTERM` to the service's process group to try to stop the service gracefully. If the process has not exited after 5 seconds, Pebble sends `SIGKILL` to the process group. If the process still doesn't exit after another 5 seconds, the stop operation raises an error. If the process exits any time before the 10 seconds have elapsed, the stop operation succeeds.
 
 <a href="#heading--fetch-service-status"><h3 id="heading--fetch-service-status">Fetch service status</h3></a>
-
 
 You can use the [`get_service`](https://ops.readthedocs.io/en/latest/#ops.Container.get_service) and [`get_services`](https://ops.readthedocs.io/en/latest/#ops.Container.get_services) methods to fetch the current status of one service or multiple services, respectively. The returned [`ServiceInfo`](https://ops.readthedocs.io/en/latest/#ops.pebble.ServiceInfo) objects provide a `status` attribute with various states, or you can use the [`ServiceInfo.is_running`](https://ops.readthedocs.io/en/latest/#ops.pebble.ServiceInfo.is_running) method.
 
@@ -356,13 +337,12 @@ class MyCharm(ops.CharmBase):
 
     def _on_backup_action(self, event):
         container = self.unit.get_container('main')
-        if container.can_connect():
-            is_running = container.get_service('mysql').is_running()
-            if is_running:
-                container.stop('mysql')
-            do_mysql_backup()
-            if is_running:
-                container.start('mysql')
+        is_running = container.get_service('mysql').is_running()
+        if is_running:
+            container.stop('mysql')
+        do_mysql_backup()
+        if is_running:
+            container.start('mysql')
 ```
 
 <a href="#heading--send-signals-to-services"><h3 id="heading--send-signals-to-services">Send signals to services</h3></a>
@@ -377,7 +357,6 @@ This will raise an `APIError` if any of the services are not in the plan or are 
 
 <a href="#heading--view-service-logs"><h3 id="heading--view-service-logs">View service logs</h3></a>
 
-
 Pebble stores service logs (stdout and stderr from services) in a ring buffer accessible via the `pebble logs` command. Each log line is prefixed with the timestamp and service name, using the format `2021-05-03T03:55:49.654Z [snappass] ...`. Pebble allocates a ring buffer of 100KB per service (not one ring to rule them all), and overwrites the oldest logs in the buffer when it fills up.
 
 When running under Juju, the Pebble server is started with the `--verbose` flag, which means it also writes these logs to Pebble's own stdout. That in turn is accessible via Kubernetes using the `kubectl logs` command. For example, to view the logs for the "redis" container, you could run:
@@ -387,7 +366,6 @@ microk8s kubectl logs -n snappass snappass-test-0 -c redis
 ```
 
 In the command line above, "snappass" is the namespace (Juju model name), "snappass-test-0" is the pod, and "redis" the specific container defined by the charm configuration.
-
 
 <a href="#heading--configure-service-auto-restart"><h3 id="heading--configure-service-auto-restart">Configure service auto-restart</h3></a>
 
@@ -423,7 +401,6 @@ The `backoff-factor` must be greater than or equal to 1.0. If the factor is set 
 
 Just before delaying, a small random time jitter of 0-10% of the delay is added (the current delay is not updated). For example, if the current delay value is 2 seconds, the actual delay will be between 2.0 and 2.2 seconds.
 
-
 <a href="#heading--perform-health-checks-on-the-workload-container"><h2 id="heading--perform-health-checks-on-the-workload-container">Perform health checks on the workload container</h2></a>
 
 From Juju version 2.9.26, Pebble supports adding custom health checks: first, to allow Pebble itself to restart services when certain checks fail, and second, to allow Kubernetes to restart containers when specified checks fail.
@@ -435,9 +412,11 @@ Each check can be one of three types. The types and their success criteria are:
 * `exec`: executing the specified command must yield a zero exit code.
 
 - [Check configuration](#heading--check-configuration)
+- [Respond to a check failing or recovering](#heading--respond-to-check)
 - [Fetch check status](#heading--fetch-check-status)
 - [Check auto-restart](#heading--check-auto-restart)
 - [Check health endpoint and probes](#heading--check-health-endpoint-and-probes)
+- [Test checks](#heading--test-checks)
 
 <a href="#heading--check-configuration"><h3 id="heading--check-configuration">Check configuration</h3></a>
 
@@ -460,7 +439,7 @@ checks:
         tcp:
             port: 8080
 
-    test:
+    http-test:
         override: replace
         http:
             url: http://localhost:8080/test
@@ -471,6 +450,59 @@ Each check is performed with the specified `period` (the default is 10 seconds a
 A check is considered healthy until it's had `threshold` errors in a row (the default is 3). At that point, the `on-check-failure` action will be triggered, and the health endpoint will return an error response (both are discussed below). When the check succeeds again, the failure count is reset.
 
 See the [layer specification](https://github.com/canonical/pebble#layer-specification) for more details about the fields and options for different types of checks.
+
+<a href="#heading--respond-to-check"><h3 id="heading--respond-to-check">Respond to a check failing or recovering</h3></a>
+
+[note status="version"]
+Ops 2.15 and Juju 3.6
+[/note]
+
+To have the charm respond to a check reaching the failure threshold, or passing again afterwards, observe the `pebble_check_failed` and `pebble_check_recovered` events and switch on the info's `name`:
+
+```python
+class PostgresCharm(ops.CharmBase):
+    def __init__(self, framework: ops.Framework):
+        super().__init__(framework)
+        # Note that "db" is the workload container's name
+        framework.observe(self.on["db"].pebble_check_failed, self._on_pebble_check_failed)
+        framework.observe(self.on["db"].pebble_check_recovered, self._on_pebble_check_recovered)
+
+    def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name == "http-test":
+            logger.warning("The http-test has started failing!")
+            self.unit.status = ops.ActiveStatus("Degraded functionality ...")
+
+        elif event.info == "online":
+            logger.error("The service is no longer online!")
+
+    def _on_pebble_check_recovered(self, event: ops.PebbleCheckRecoveredEvent):
+        if event.info.name == "http-test":
+            logger.warning("The http-test has stopped failing!")
+            self.unit.status = ops.ActiveStatus()
+
+        elif event.info == "online":
+            logger.error("The service is online again!")
+```
+
+All check events have an `info` property with the details of the check's current status. Note that, by the time that the charm receives the event, the status of the check may have changed (for example, passed again after failing). If the response to the check failing is light (such as changing the status), then it's fine to rely on the status of the check at the time the event was triggered — there will be a subsequent check-recovered event, and the status will quickly flick back to the correct one. If the response is heavier (such as restarting a service with an adjusted configuration), then the two events should share a common handler and check the current status via the `info` property; for example:
+
+```python
+class PostgresCharm(ops.CharmBase):
+    def __init__(self, framework: ops.Framework):
+        super().__init__(framework)
+        # Note that "db" is the workload container's name
+        framework.observe(self.on["db"].pebble_check_failed, self._on_pebble_check_failed)
+        framework.observe(self.on["db"].pebble_check_recovered, self._on_pebble_check_recovered)
+
+    def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name != "up":
+            # For now, we ignore the other tests.
+            return
+        if event.info.status == ops.pebble.CheckStatus.DOWN:
+            self.activate_alternative_configuration()
+        else:
+            self.activate_main_configuration()
+```
 
 <a href="#heading--fetch-check-status"><h3 id="heading--fetch-check-status">Fetch check status</h3></a>
 
@@ -487,14 +519,14 @@ if check.status != ops.pebble.CheckStatus.UP:
 
 <a href="#heading--check-auto-restart"><h3 id="heading--check-auto-restart">Check auto-restart</h3></a>
 
-To enable Pebble auto-restart behavior based on a check, use the `on-check-failure` map in the service configuration. For example, to restart the "server" service when the "test" check fails, use the following configuration:
+To enable Pebble auto-restart behavior based on a check, use the `on-check-failure` map in the service configuration. For example, to restart the "server" service when the "http-test" check fails, use the following configuration:
 
 ```yaml
 services:
     server:
         override: merge
         on-check-failure:
-            test: restart   # can also be "shutdown" or "ignore" (the default)
+            http-test: restart   # can also be "shutdown" or "ignore" (the default)
 ```
 
 <a href="#heading--check-health-endpoint-and-probes"><h3 id="heading--check-health-endpoint-and-probes">Check health endpoint and probes</h3></a>
@@ -503,15 +535,33 @@ As of Juju version 2.9.26, Pebble includes an HTTP `/v1/health` endpoint that al
 
 Each check can specify a `level` of "alive" or "ready". These have semantic meaning: "alive" means the check or the service it's connected to is up and running; "ready" means it's properly accepting network traffic. These correspond to Kubernetes ["liveness" and "readiness" probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
 
-When Juju creates a sidecar charm container, it initializes the Kubernetes liveness and readiness probes to hit the `/v1/health` endpoint with `?level=alive` and `?level=ready` filters, respectively.
+When Juju creates a sidecar charm container, it initialises the Kubernetes liveness and readiness probes to hit the `/v1/health` endpoint with `?level=alive` and `?level=ready` filters, respectively.
 
 Ready implies alive, and not alive implies not ready. If you've configured an "alive" check but no "ready" check, and the "alive" check is unhealthy, `/v1/health?level=ready` will report unhealthy as well, and the Kubernetes readiness probe will act on that.
 
 If there are no checks configured, Pebble returns HTTP 200 so the liveness and readiness probes are successful by default. To use this feature, you must explicitly create checks with `level: alive` or `level: ready` in the layer configuration.
 
+<a href="#heading--test-checks"><h3 id="heading--test-checks">Test checks</h3></a>
+
+[note status="version"]
+Scenario 7.0
+[/note]
+
+To test charms that use Pebble check events, use the Scenario `CheckInfo` class and the emit the appropriate event. For example, to simulate the "http-test" check failing, the charm test could do the following:
+
+```python
+def test_http_check_failing():
+    ctx = scenario.Context(PostgresCharm)
+    check_info = scenario.CheckInfo("http-test", failures=3, status=ops.pebble.CheckStatus.DOWN)
+    container = scenario.Container("db", check_infos={check_info})
+    state_in = scenario.State(containers={container})
+
+    state_out = ctx.run(ctx.on.pebble_check_failed(container, check_info), state_in)
+
+    assert state_out...
+```
 
 <a href="#heading--manage-files-in-the-workload-container"><h2 id="heading--manage-files-in-the-workload-container">Manage files in the workload container</h2></a>
-
 
 Pebble's files API allows charm authors to read and write files on the workload container. You can write files ("push"), read files ("pull"), list files in a directory, make directories, and delete files or directories.
 
@@ -525,7 +575,6 @@ Pebble's files API allows charm authors to read and write files on the workload 
 - [Check file and directory existence](#heading--check-file-and-directory-existence)
 
 <a href="#heading--push"><h3 id="heading--push">Push</h3></a>
-
 
 Probably the most useful operation is [`Container.push`](https://ops.readthedocs.io/en/latest/#ops.Container.push), which allows you to write a file to the workload, for example, a PostgreSQL configuration file. You can use `push` as follows (note that this code would be inside a charm event handler):
 
@@ -543,7 +592,6 @@ There are many additional features, including the ability to send raw bytes (by 
 
 <a href="#heading--pull"><h3 id="heading--pull">Pull</h3></a>
 
-
 To read a file from the workload, use [`Container.pull`](https://ops.readthedocs.io/en/latest/#ops.Container.pull), which returns a file-like object that you can `read()`.
 
 The files API doesn't currently support update, so to update a file you can use `pull` to perform a read-modify-write operation, for example:
@@ -554,8 +602,7 @@ config = container.pull('/etc/pg/postgresql.conf').read()
 if 'port =' not in config:
     config += '\nport = 8888\n'
 container.push('/etc/pg/postgresql.conf', config)
-container.stop('postgresql')
-container.start('postgresql')
+container.restart('postgresql')
 ```
 
 If you specify the keyword argument `encoding=None` on the `pull()` call, reads from the returned file-like object will return `bytes`. The default is `encoding='utf-8'`, which will decode the file's bytes from UTF-8 so that reads return a Python `str`.
@@ -577,7 +624,6 @@ container.push_path('/source/dir/*', '/destination')
 A trailing "/*" on the source directory is the only supported globbing/matching.
 
 <a href="#heading--pull-recursive"><h3 id="heading--pull-recursive">Pull recursive</h3></a>
-
 
 [note status="version"]1.5[/note]
 
@@ -609,7 +655,6 @@ if 'host.conf' not in names:
 If you want information about the directory itself (instead of its contents), call `list_files(path, itself=True)`.
 
 <a href="#heading--create-directory"><h3 id="heading--create-directory">Create directory</h3></a>
-
 
 To create a directory, use [`Container.make_dir`](https://ops.readthedocs.io/en/latest/#ops.Container.make_dir). It takes an optional `make_parents=True` argument (like `mkdir -p`), as well as optional permissions and user/group arguments. Some examples:
 
@@ -647,7 +692,6 @@ container.isdir('/tmp/mydir') # True
 
 <a href="#heading--run-commands-on-the-workload-container"><h2 id="heading--run-commands-on-the-workload-container">Run commands on the workload container</h2></a>
 
-
 From Juju 2.9.17, Pebble includes an API for executing arbitrary commands on the workload container: the [`Container.exec`](https://ops.readthedocs.io/en/latest/#ops.Container.exec) method. It supports sending stdin to the process and receiving stdout and stderr, as well as more advanced options.
 
 To run simple commands and receive their output, call `Container.exec` to start the command, and then use the returned [`Process`](https://ops.readthedocs.io/en/latest/#ops.pebble.ExecProcess) object's [`wait_output`](https://ops.readthedocs.io/en/latest/#ops.pebble.ExecProcess.wait_output) method to wait for it to finish and collect its output.
@@ -682,7 +726,7 @@ It's okay to let these exceptions bubble up: Juju will mark the hook as failed a
 process = container.exec(['cat', '--bad-arg'])
 try:
     stdout, _ = process.wait_output()
-    print(stdout)
+    logger.info(stdout)
 except ops.pebble.ExecError as e:
     logger.error('Exited with code %d. Stderr:', e.exit_code)
     for line in e.stderr.splitlines():
@@ -697,9 +741,7 @@ Exited with code 1. Stderr:
     Try 'cat --help' for more information.
 ```
 
-
 <a href="#heading--use-command-options"><h3 id="heading--use-command-options">Use command options</h3></a>
-
 
 The `Container.exec` method has various options (see [full API documentation](https://ops.readthedocs.io/en/latest/#ops.pebble.Client.exec)), including:
 
@@ -736,10 +778,7 @@ process = container.exec(['pg_dump', 'mydb'], service_context='database')
 process.wait_output()
 ```
 
-
 <a href="#heading--use-input-output-options"><h3 id="heading--use-input-output-options">Use input/output options</h3></a>
-
-
 
 The simplest way of receiving standard output and standard error is by using the [`ExecProcess.wait_output`](https://ops.readthedocs.io/en/latest/#ops.pebble.ExecProcess.wait_output) method as shown below. The simplest way of sending standard input to the program is as a string, using the `stdin` parameter to `exec`. For example:
 
@@ -812,7 +851,6 @@ Output: 'THREE\n'
 
 Caution: it's easy to get threading wrong and cause deadlocks, so it's best to use `wait_output` or pass file-like objects to `exec` instead if possible.
 
-
 <a href="#heading--send-signals-to-a-running-command"><h3 id="heading--send-signals-to-a-running-command">Send signals to a running command</h3></a>
 
 To send a signal to the running process, use [`ExecProcess.send_signal`](https://ops.readthedocs.io/en/latest/#ops.pebble.ExecProcess.send_signal) with a signal number or name. For example, the following will terminate the "sleep 10" process after one second:
@@ -832,7 +870,6 @@ Traceback (most recent call last):
 ops.pebble.ExecError: non-zero exit code 143 executing ['sleep', '10']
 ```
 
-
 <a href="#heading--use-custom-notices-from-the-workload-container"><h2 id="heading--use-custom-notices-from-the-workload-container">Use custom notices from the workload container</h2></a>
 
 > See also: [Pebble > Notice](/t/13070)
@@ -844,14 +881,12 @@ ops.pebble.ExecError: non-zero exit code 143 executing ['sleep', '10']
 
 <a href="#heading--record-a-notice"><h3 id="heading--record-a-notice">Record a notice</h3></a>
 
-
 To record a custom notice, use the `pebble notify` CLI command. For example, the workload might have a script to back up the database and then record a notice:
 
 ```sh
 pg_dump mydb >/tmp/mydb.sql
 /charm/bin/pebble notify canonical.com/postgresql/backup-done path=/tmp/mydb.sql
 ```
-
 
 The first argument to `pebble notify` is the key, which must be in the format `<domain>/<path>`. The caller can optionally provide map data arguments in `<name>=<value>` format; this example shows a single data argument named `path`.
 
@@ -883,15 +918,12 @@ class PostgresCharm(ops.CharmBase):
 
 All notice events have a [`notice`](https://ops.readthedocs.io/en/latest/#ops.PebbleNoticeEvent.notice) property with the details of the notice recorded. That is used in the example above to switch on the notice `key` and look at its `last_data` (to determine the backup's path).
 
-
 <a href="#heading--fetch-notices"><h3 id="heading--fetch-notices">Fetch notices</h3></a>
-
 
 A charm can also query for notices using the following two `Container` methods:
 
 * [`get_notice`](https://ops.readthedocs.io/en/latest/#ops.Container.get_notice), which gets a single notice by unique ID (the value of `notice.id`).
 * [`get_notices`](https://ops.readthedocs.io/en/latest/#ops.Container.get_notices), which returns all notices by default, and allows filtering notices by specific attributes such as `key`.
-
 
 <a href="#heading--test-notices"><h3 id="heading--test-notices">Test notices</h3></a>
 
@@ -922,7 +954,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(upload_f.read(), b"BACKUP")
         self.assertEqual(upload_key, "db-backup.sql")
 ```
-
 
 <!--
  <a href="#heading--access-the-pebble-client-directly"><h2 id="heading--access-the-pebble-client-directly">Access the Pebble client directly</h2></a>

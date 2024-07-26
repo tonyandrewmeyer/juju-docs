@@ -27,6 +27,29 @@ storage:
 
 > See more: [File `charmcraft.yaml` > `storage`](/t/7132#heading--storage)
 
+For Kubernetes charms, you also need to define where on the workload container the volume will be mounted. For example, to mount a similar cache filesystem in `/var/cache/`:
+
+```yaml
+storage:
+  local-cache:
+      type: filesystem
+      description: Somewhere to cache files locally.
+      # The location is not required here, because it defines the location on
+      # the charm container, not the workload container.
+      minimum-size: 1G
+      properties:
+          - transient
+
+containers:
+  web-service:
+    resource: app-image
+    mounts:
+      - storage: local-cache
+        location: /var/cache
+```
+
+> See more: [File `charmcraft.yaml` > `containers`](/t/7132#heading--containers)
+
 <a href="#heading--observe-the-attached-event-and-define-an-event-handler"><h3 id="heading--observe-the-attached-event-and-define-an-event-handler">Observe the `storage-attached` event and define an event handler</h3></a>
 
 In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the `storage-attached` event associated with your storage and pair that with an event handler, typically a holistic one. For example:
@@ -36,6 +59,8 @@ self.framework.observe(self.on.cache_storage_attached, self._update_configuratio
 ```
 
 > See more: [`ops.StorageAttachedEvent`](https://ops.readthedocs.io/en/latest/#ops.StorageAttachedEvent), [Juju SDK | Holistic vs delta charms](https://juju.is/docs/sdk/holistic-vs-delta-charms)
+
+Storage volumes will be automatically mounted into the charm container at either the path specified in the `location` field in the metadata, or the default location `/var/lib/juju/storage/<storage-name>`. However, your charm code should not hard-code the location, and should instead use the `.location` property of the storage object.
 
 Now, in the body of the charm definition, define the event handler, or adjust an existing holistic one. For example, to provide the location of the attached storage to the workload configuration:
 
@@ -78,6 +103,10 @@ def _on_storage_detaching(self, event: ops.StorageDetachingEvent):
 > Examples: [MySQL handling cluster management](https://github.com/canonical/mysql-k8s-operator/blob/4c575b478b7ae2a28b09dde9cade2d3370dd4db6/src/charm.py#L823), [MongoDB updating the set before storage is removed](https://github.com/canonical/mongodb-operator/blob/b33d036173f47c68823e08a9f03189dc534d38dc/src/charm.py#L596)
 
 <a href="#heading--request-additional-storage"><h2 id="heading--request-additional-storage">Request additional storage</h2></a>
+
+[note type=information status="Machine charms only"]
+Juju only supports adding multiple instances of the same storage volume on machine charms. Kubernetes charms may only have a single instance of each volume.
+[/note]
 
 If the charm needs additional units of a storage, it can request that with the `storages.request`
 method. The storage must be defined in the metadata as allowing multiple, for

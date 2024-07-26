@@ -2,22 +2,22 @@
 
 **Contents:**
 
-- [Observe the leader-elected event and define an event handler](#heading--observe-the-leader-elected-event-and-define-an-event-handler)
+- [Observe the `leader-elected` event and define an event handler](#heading--observe-the-leader-elected-event-and-define-an-event-handler)
 - [Test leadership management](#heading--test-leadership-management)
 
-<a href="#heading--observe-the-leader-elected-event-and-define-an-event-handler"><h2 id="heading--observe-the-leader-elected-event-and-define-an-event-handler">Observe the leader-elected event and define an event handler</h3></a>
+<a href="#heading--observe-the-leader-elected-event-and-define-an-event-handler"><h2 id="heading--observe-the-leader-elected-event-and-define-an-event-handler">Observe the `leader-elected` event and define an event handler</h3></a>
 
-In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the leader-elected event and pair that with an event handler. For example:
+In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the `leader-elected` event and pair that with an event handler. For example:
 
-```
+```python
 self.framework.observe(self.on.leader_elected, self._on_leader_elected)
 ```
 
-> See more: [LeaderElectedEvent](https://ops.readthedocs.io/en/latest/#ops.LeaderElectedEvent)
+> See more: `[`ops.LeaderElectedEvent`](https://ops.readthedocs.io/en/latest/#ops.LeaderElectedEvent)
 
-Now, in the body of the charm definition, define the event handler. For example, updating a configuration file:
+Now, in the body of the charm definition, define the event handler. For example, the handler below will update a configuration file:
 
-```
+```python
 def _on_leader_elected(self, event: ops.LeaderElectedEvent):
     self.reconfigure(leader=self.unit)
 ```
@@ -142,6 +142,8 @@ async def get_leader_unit(ops_test, app, model=None):
 ```
 
 > Examples: [Zookeeper testing upgrades](https://github.com/canonical/zookeeper-operator/blob/106f9c2cd9408a172b0e93f741d8c9f860c4c38e/tests/integration/test_upgrade.py#L22), [postgresql testing password rotation action](https://github.com/canonical/postgresql-k8s-operator/blob/62645caa89fd499c8de9ac3e5e9598b2ed22d619/tests/integration/test_password_rotation.py#L38)
+
+> See more: [`juju.unit.Unit.is_leader_from_status`](https://pythonlibjuju.readthedocs.io/en/latest/api/juju.unit.html#juju.unit.Unit.is_leader_from_status)
 
 <br>
 

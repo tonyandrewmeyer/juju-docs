@@ -50,7 +50,7 @@ unit test.
 > See first: [How to write integration tests for a charm](/t/12734)
 
 To verify that setting the charm version works correctly in an integration test, get the status
-of the model, and check the `workload_version` attribute of the unit. For example:
+of the model, and check the `charm_version` attribute of the unit. For example:
 
 ```python
 async def test_build_and_deploy(ops_test: OpsTest):

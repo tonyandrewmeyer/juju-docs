@@ -152,9 +152,9 @@ def test_start(harness):
     assert harness.get_workload_version() == "1.2"
 ```
 
-> Examples: [grafana-k8s checking the workload version](https://github.com/canonical/grafana-k8s-operator/blob/1c80f746f8edeae6fd23ddf31eed45f5b88c06b4/tests/unit/test_charm.py#L283) (and the [earlier mocking](https://github.com/canonical/grafana-k8s-operator/blob/1c80f746f8edeae6fd23ddf31eed45f5b88c06b4/tests/unit/test_charm.py#L127)), [sdcore-webui checks both that the version is set when it is available, and not set when not](https://github.com/canonical/sdcore-webui-k8s-operator/blob/1a66ad3f623d665657d04ad556139439f4733a28/tests/unit/test_charm.py#L447)
-
 > See more: [`ops.testing.Harness.get_workload_version`](https://ops.readthedocs.io/en/latest/#ops.testing.Harness.get_workload_version)
+
+> Examples: [grafana-k8s checking the workload version](https://github.com/canonical/grafana-k8s-operator/blob/1c80f746f8edeae6fd23ddf31eed45f5b88c06b4/tests/unit/test_charm.py#L283) (and the [earlier mocking](https://github.com/canonical/grafana-k8s-operator/blob/1c80f746f8edeae6fd23ddf31eed45f5b88c06b4/tests/unit/test_charm.py#L127)), [sdcore-webui checks both that the version is set when it is available, and not set when not](https://github.com/canonical/sdcore-webui-k8s-operator/blob/1a66ad3f623d665657d04ad556139439f4733a28/tests/unit/test_charm.py#L447)
 
 <a href="#heading--write-scenario-tests"><h3 id="heading--write-scenario-tests">Write scenario tests</h3></a>
 
@@ -205,11 +205,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
     assert version == "3.14"
 ```
 
-> Examples: [synapse checking that the unit's workload version matches the one reported by the server](https://github.com/canonical/synapse-operator/blob/778bcd414644c922373d542a304be14866835516/tests/integration/test_charm.py#L139)
-
 <!---
 No "see more" link: this is not currently documented in the pylibjuju docs.
 -->
+
+> Examples: [synapse checking that the unit's workload version matches the one reported by the server](https://github.com/canonical/synapse-operator/blob/778bcd414644c922373d542a304be14866835516/tests/integration/test_charm.py#L139)
 
 <br>
 

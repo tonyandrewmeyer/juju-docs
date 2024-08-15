@@ -1,5 +1,3 @@
-> See first: [Juju | Leader](https://juju.is/docs/juju/leader)
-
 **Contents:**
 
 - [Set the charm version](#heading--set-the-version-of-the-charm)

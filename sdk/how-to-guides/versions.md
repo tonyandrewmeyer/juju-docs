@@ -163,7 +163,7 @@ def test_start(harness):
 When using Scenario for unit tests, retrieve the workload version from the `State`. For example:
 
 ```python
-def test_workload_version_is_set(leader):
+def test_workload_version_is_set():
     ctx = scenario.Context(MyCharm, meta={"name": "foo"})
     # Our charm gets the workload version by running a command in the container,
     # so mock that out.

@@ -101,7 +101,7 @@ file, in the `__init__` function of your charm, set up an observer for the
 self.framework.observe(self.on.start, self._on_start)
 ```
 
-> See more: `[`ops.StartEvent`](https://ops.readthedocs.io/en/latest/#ops.StartEvent)
+> See more: [`ops.StartEvent`](https://ops.readthedocs.io/en/latest/#ops.StartEvent)
 
 Now, in the body of the charm definition, define the event handler. Typically,
 the workload version is retrieved from the workload itself, with a subprocess

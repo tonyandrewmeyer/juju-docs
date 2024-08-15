@@ -43,8 +43,9 @@ uploading a charm to CharmHub (or when deploying/refreshing for local charms).
 
 > See first: [Get started with charm testing](https://juju.is/docs/sdk/get-started-with-charm-testing)
 
-Since the charm cannot read its own version, you'll want to test that the
-version is correctly set with an integration test.
+Since the version isn't set by the charm code itself, you'll want to test that
+the version is correctly set with an integration test, rather than also having a
+unit test.
 
 > See first: [How to write integration tests for a charm](/t/12734)
 

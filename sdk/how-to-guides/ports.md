@@ -74,7 +74,7 @@ def test_port_configuration():
 
 > Examples: [`charm-microk8s` checks that the `install` hook opens a port](https://github.com/canonical/charm-microk8s/blob/1e7fd26e4f85f361a813106325d84bf079cd7b1a/tests/unit/test_charm_control_plane.py#L34)
 
-> See more: [`ops.Unit.opened_ports`](https://ops.readthedocs.io/en/latest/#ops.Unit.opened_ports)
+> See more: [Testing a `config-changed` observer](https://juju.is/docs/sdk/config#heading--test-the-config), [`ops.Unit.opened_ports`](https://ops.readthedocs.io/en/latest/#ops.Unit.opened_ports)
 
 <a href="#heading--write-scenario-tests"><h3 id="heading--write-scenario-tests">Write scenario tests</h3></a>
 

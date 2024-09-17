@@ -7,9 +7,9 @@
 
 <a href="#heading--heading--open-a-port-to-your-charm"><h2 id="heading--heading--open-a-port-to-your-charm">Open a port based on the charm config</h2></a>
 
-To make a service permanently reachable under a stable URL on the cluster the charm needs to open (expose) a port. This ensures that the charm will be consistently accessible even if the pod gets recycled and the IP address changes.
+To make a service permanently reachable under a stable URL on the cluster, the charm needs to open (expose) a port. This ensures that the charm will be consistently accessible even if the pod gets recycled and the IP address changes.
 
-The port that the charm's service should be reachable on is typically a config option; for example, by including a section like this in `charmcraft.yaml`:
+The port that the charm's service should be reachable on is typically defined as a config option; for example, by having your `charmcraft.yaml` include a section like this:
 
 ```yaml
 options:
@@ -43,7 +43,7 @@ def _on_config_changed(self, event: ops.ConfigChangedEvent):
 
 > See first: [Get started with charm testing](https://juju.is/docs/sdk/get-started-with-charm-testing)
 
-You'll want to add three levels of tests, unit, Scenario, and integration.
+You'll want to add three levels of tests: unit, Scenario, and integration.
 
 - [Test setting the workload version -- unit tests](#heading--write-unit-tests)
 - [Test setting the workload version -- Scenario tests](#heading--write-scenario-tests)
@@ -74,7 +74,7 @@ def test_port_configuration():
 
 > See first: [How to write scenario tests for a charm](/t/10585)
 
-To use a Scenario test to verify that the `config-changed` event results in the port being opened, the new config is passed to the `State`, and the `State.opened_ports` attribute is checked after running the event. For example, in your `tests/scenario/test_charm.py` file, add the following test function to the file:
+To use a Scenario test to verify that the `config-changed` event results in the port being opened, pass the new config to the `State`, and, after running the event, check the `State.opened_ports` attribute. For example, in your `tests/scenario/test_charm.py` file, add the following test function:
 
 ```python
 def test_open_port():

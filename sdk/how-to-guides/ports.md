@@ -1,5 +1,9 @@
 > See first: [Juju `open-port`](https://juju.is/docs/juju/hook-tool#open-port)
 
+[note]
+Use at least Juju 2.9 for machine charms, and at least Juju 3.1 for Kubernetes charms.
+[/note]
+
 **Contents**:
 
 1. [Open a port based on the charm config](#heading--open-a-port-to-your-charm)

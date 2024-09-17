@@ -3,7 +3,7 @@ Testing charm code is an essential part of charming. Here we will see how to get
 Prerequisites:
 - knowledge of testing in general
 - knowledge of Juju and charms
-- knowledge of the Juju models and events, esp. the data involved in a charm's lifecycle (e.g. see [Talking to a workload control flow from A to Z](/t/6161)
+- knowledge of the Juju models and events, esp. the data involved in a charm's lifecycle (e.g. see [Talking to a workload control flow from A to Z](/t/6161))
 
 What you will learn:
 - What are the starting points for adding tests to a charm?
@@ -16,7 +16,7 @@ What you will learn:
   - Where can you apply functional testing?
 - How to automate this in a CI pipeline.
 
-# Charmcraft Profiles
+# Charmcraft profiles
 
 The most popular way to set up a charm project is via `charmcraft init`. For example, to get set up for creating a machine charm, run:
 
@@ -49,7 +49,7 @@ There are also profiles for `kubernetes` and for building charms for apps develo
 
 > See more: [ Write your first Kubernetes charm for a Flask app](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-for-a-flask-app)
 
-# Unit Testing
+# Unit testing
 
 ## A charm as an input -> output function
 
@@ -92,11 +92,11 @@ In the charming world, unit testing means using Harness.
 
 > See more [`ops.testing.Harness`](https://ops.readthedocs.io/en/latest/#ops.testing.Harness)
 
-Harness is the 'mocker' for most inputs and outputs you will need. Where a live charm would gather its input through context variables and calls to the Juju api (by running the hook tools), a charm under unit test will gather data via a mocked backend managed by Harness. Where a live charm would produce output by writing files to a filesystem, Harness exposes a mock filesystem the charm will be able to interact with without knowing the difference. More specific outputs, however, will be need to be mocked individually.
+Harness is the 'mocker' for most inputs and outputs you will need. Where a live charm would gather its input through context variables and calls to the Juju api (by running the hook tools), a charm under unit test will gather data via a mocked backend managed by Harness. Where a live charm would produce output by writing files to a filesystem, Harness exposes a mock filesystem the charm will be able to interact with without knowing the difference. More specific outputs, however, will need to be mocked individually.
 
 A typical test with Harness will look like this:
  
-- set up:
+- set things up:
   - set up the charm and its metadata
   - set up the harness
   - mock any 'output' callable that you know would misfire or break (e.g. a system call -- you don't want a unittest to reboot your laptop)
@@ -178,7 +178,7 @@ def test_pebble_ready_writes_config_file():
 An important difference between a harnessed charm and a 'live', deployed, charm is that `Harness` holds on to the charm instance between events, while a deployed charm garbage-collects the charm instance between hooks. So if your charm were to set some states in, say, instance attributes, and rely on it on subsequent event handling loops, the unit tests based on the harness would not be able to catch that mistake. An integration test would.
 [/note]
 
-# Integration Testing
+# Integration testing
 
 Where unit testing focuses on black-box method-by-method verification, integration testing focuses on the big picture. Typically integration tests check that the charm does not break (generally this means: blocks with status `blocked` or `error`) when a (mocked) cloud admin performs certain operations. These operations are scripted by using, in order of abstraction:
  -  shell commands against [the `juju` cli](https://juju.is/docs/olm/juju-cli-commands)
@@ -244,14 +244,14 @@ async def test_operation(ops_test: OpsTest):
 
 A good integration testing suite will check that the charm continues to operate as expected whenever possible, by combining these simple elements.
 
-# Functional Testing
+# Functional testing
 
 Some charms represent their workload by means of an object-oriented wrapper, which mediates between operator code and the implementation of operation logic. In such cases, it can be useful to add a third category of tests, namely functional tests, that black-box test that workload wrapper without worrying about the substrate it runs on (the charm, the cloud, the machine or pod...).
 For an example charm adopting this strategy, see [parca-operator](https://github.com/jnsgruk/parca-operator). Nowadays, the preferred tool to do functional testing is Scenario.
 
 > See more: [Scenario](https://github.com/canonical/ops-scenario), [Write a Scenario test for a charm](/t/10585)
 
-# CI
+# Continuous integration
 
 Typically, you want the tests to be run automatically against any PR into your repository's main branch, and sometimes, to trigger a new release whenever that succeeds. CD is out of scope for this article, but we will look at how to set up a basic CI.
 

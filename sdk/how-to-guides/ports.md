@@ -9,7 +9,9 @@
 
 To make a service permanently reachable under a stable URL on the cluster, the charm needs to open (expose) a port. This ensures that the charm will be consistently accessible even if the pod gets recycled and the IP address changes.
 
-The port that the charm's service should be reachable on is typically defined as a config option; for example, by having your `charmcraft.yaml` include a section like this:
+The port that the charm's service should be reachable on is typically defined as a config option. As such, all the usual procedure for adding a config option to a charm applies:
+
+1. In your `charmcraft.yaml` define a config that sets the port to be opened/exposed. For example:
 
 ```yaml
 options:
@@ -20,7 +22,7 @@ options:
       default: 8000
 ```
 
-This means that the charm should update the open ports in the `config-changed` handler. In the `src/charm.py` file, in the `__init__` function of your charm, set up an observer for the `config-changed` event. For example:
+2. In your `src/charm.py` observe the `config-changed` event and define a handler. For example:
 
 ```python
 self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -37,13 +39,13 @@ def _on_config_changed(self, event: ops.ConfigChangedEvent):
 
 > Examples: [`loki-k8s` sets the open port in the charm `__init__`](https://github.com/canonical/loki-k8s-operator/blob/2e4674d64b692f82ae3dec8f7f1f0745f087827f/src/charm.py#L150), [`mysql-router` sets ports based on whether the charm is configured to be externally accessible](https://github.com/canonical/mysql-router-operator/blob/04c7b3a0ebb6279648bd3f72c5c04b0f7bad1e0c/src/machine_charm.py#L111)
 
-> See more: [`ops.Unit.set_ports`](https://ops.readthedocs.io/en/latest/#ops.Unit.set_ports)
+> See more: [How to add a config option to a charm](https://juju.is/docs/sdk/config), [`ops.Unit.set_ports`](https://ops.readthedocs.io/en/latest/#ops.Unit.set_ports)
 
 <a href="#heading--test-the-port-is-opened"><h2 id="heading--test-the-port-is-opened">Test the port is opened</h2></a>
 
 > See first: [Get started with charm testing](https://juju.is/docs/sdk/get-started-with-charm-testing)
 
-You'll want to add three levels of tests: unit, Scenario, and integration.
+You'll want to add three levels of tests: unit, Scenario, and integration. For a charm that exposes the ports to open via config options, the tests are much the same as for testing adding config options, but also verify that the port is opened.
 
 - [Test setting the workload version -- unit tests](#heading--write-unit-tests)
 - [Test setting the workload version -- Scenario tests](#heading--write-scenario-tests)
